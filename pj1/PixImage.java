@@ -34,6 +34,7 @@ public class PixImage {
    */
    public PixImage(int width, int height) {
      // Your solution here.
+     w = width; h = height;
      pixArray = new short[width][height][3];
      for (int x = 0; x < width; x++) {
        for (int y = 0; y < height; y++) {
@@ -137,7 +138,8 @@ public class PixImage {
         for (int z = 0; z < 3; z++) {
           str += String.valueOf(pixArray[x][y][z]) + ",";
         }
-        str += "# ";
+        str += "#\t";
+        //if (pixArray[x][y][0] == 0) { str += "\t"; }
       }
       str += "\n";
     }
@@ -175,23 +177,36 @@ public class PixImage {
    */
    public PixImage boxBlur(int numIterations) {
      // Replace the following line with your solution.
-     PixImage blrdEx = new PixImage(this.w+2, this.h+2);
-     PixImage blrd = new PixImage(this.w, this.h);
-     for (int x = 1; x < this.w+1; x++) {
-       for (int y = 1; y < this.h+1; y++) {
-         for (int z = 0; y < 3; z++) {
-           blrdEx.pixArray[x][y][z] = this.pixArray[x][y][z];
+     PixImage blrdEx = new PixImage(w+2, h+2);
+     PixImage blrd = new PixImage(w, h);
+     for (int x = 1; x < w+1; x++) {
+       for (int y = 1; y < h+1; y++) {
+         for (int z = 0; z < 3; z++) {
+           blrdEx.pixArray[x][y][z] = this.pixArray[x-1][y-1][z];
          }
        }
      }
-     for (int x = 1; x < this.w+1; x++) {
-       for (int y = 1; y < this.h+1; y++) {
+     int[][] numNeighbor = new int[w][h];
+     for (int x = 0; x < w; x++) {
+       for (int y = 0; y < h; y++) {
+         if ((x == 0 && (y == 0 || y == h-1)) || (x == w-1 && (y == 0 || y == h-1))) {
+           numNeighbor[x][y] = 4;
+         } else if (x == 0 || x == w-1 || y == 0 || y == w-1) {
+           numNeighbor[x][y] = 6;
+         } else {
+           numNeighbor[x][y] = 9;
+         }
+       }
+     }
+     for (int x = 1; x < w+1; x++) {
+       for (int y = 1; y < h+1; y++) {
          for (int z = 0; z < 3; z++) {
            blrd.pixArray[x-1][y-1][z] = (short) ((blrdEx.pixArray[x-1][y-1][z]
            + blrdEx.pixArray[x][y-1][z] + blrdEx.pixArray[x+1][y-1][z]
            + blrdEx.pixArray[x-1][y][z] + blrdEx.pixArray[x][y][z]
            + blrdEx.pixArray[x+1][y][z] + blrdEx.pixArray[x-1][y+1][z]
-           + blrdEx.pixArray[x][y+1][z] + blrdEx.pixArray[x+1][y+1][z])/9);
+           + blrdEx.pixArray[x][y+1][z] + blrdEx.pixArray[x+1][y+1][z])
+           /numNeighbor[x-1][y-1]);
          }
        }
      }
@@ -244,7 +259,66 @@ public class PixImage {
    */
   public PixImage sobelEdges() {
     // Replace the following line with your solution.
-    return this;
+    PixImage sobeEx = new PixImage(w+2, h+2);
+    PixImage sobe = new PixImage(w, h);
+    for (int x = 0; x < w+2; x++) {
+      for (int y = 0; y < h+2; y++) {
+        for (int z = 0; z < 3; z++) {
+          if (x == 0 && y == 0) {
+            sobeEx.pixArray[x][y][z] = this.pixArray[x][y][z];
+          } else if (x == 0 && y == h+1) {
+            sobeEx.pixArray[x][y][z] = this.pixArray[x][y-2][z];
+          } else if (x == w+1 && y == 0) {
+            sobeEx.pixArray[x][y][z] = this.pixArray[x-2][y][z];
+          } else if (x == w+1 && y == h+1) {
+            sobeEx.pixArray[x][y][z] = this.pixArray[x-2][y-2][z];
+          } else if (x == 0) {
+            sobeEx.pixArray[x][y][z] = this.pixArray[x][y-1][z];
+          } else if (x == w+1) {
+            sobeEx.pixArray[x][y][z] = this.pixArray[x-2][y-1][z];
+          } else if (y == 0) {
+            sobeEx.pixArray[x][y][z] = this.pixArray[x-1][y][z];
+          } else if (y == h+1) {
+            sobeEx.pixArray[x][y][z] = this.pixArray[x-1][y-2][z];
+          } else {
+            sobeEx.pixArray[x][y][z] = this.pixArray[x-1][y-1][z];
+          }
+        }
+      }
+    }
+    long gx[][][] = new long[w][h][3];
+    long gy[][][] = new long[w][h][3];
+    for (int x = 1; x < w+1; x++) {
+      for (int y = 1; y < h+1; y++) {
+        for (int z = 0; z < 3; z++) {
+          gx[x-1][y-1][z] = sobeEx.pixArray[x-1][y-1][z]
+          - sobeEx.pixArray[x+1][y-1][z] + 2*sobeEx.pixArray[x-1][y][z]
+          - 2*sobeEx.pixArray[x+1][y][z] + sobeEx.pixArray[x-1][y+1][z]
+          - sobeEx.pixArray[x+1][y+1][z];
+          gy[x-1][y-1][z] = sobeEx.pixArray[x-1][y-1][z]
+          + 2*sobeEx.pixArray[x][y-1][z] + sobeEx.pixArray[x+1][y-1][z]
+          - sobeEx.pixArray[x-1][y+1][z] - 2*sobeEx.pixArray[x][y+1][z]
+          - sobeEx.pixArray[x+1][y+1][z];
+        }
+      }
+    }
+    long[][] tt = new long[w][h];
+    for (int x = 0; x < w; x++) {
+      for (int y = 0; y < h; y++) {
+        for (int z = 0; z < 3; z++) {
+          sobe.pixArray[x][y][z] = mag2gray(gx[x][y][0]*gx[x][y][0]
+          + gy[x][y][0]*gy[x][y][0] + gx[x][y][1]*gx[x][y][1]
+          + gy[x][y][1]*gy[x][y][1] + gx[x][y][2]*gx[x][y][2]
+          + gy[x][y][2]*gy[x][y][2]);
+          tt[x][y] = (gx[x][y][0]*gx[x][y][0]
+          + gy[x][y][0]*gy[x][y][0] + gx[x][y][1]*gx[x][y][1]
+          + gy[x][y][1]*gy[x][y][1] + gx[x][y][2]*gx[x][y][2]
+          + gy[x][y][2]*gy[x][y][2]);
+        }
+      }
+    }
+
+    return sobe;
     // Don't forget to use the method mag2gray() above to convert energies to
     // pixel intensities.
   }

@@ -29,11 +29,8 @@ public class RunLengthEncoding implements Iterable {
    *  Define any variables associated with a RunLengthEncoding object here.
    *  These variables MUST be private.
    */
-   private int width;
-   private int height;
-   protected DList runs;
-
-
+   private int w, h;
+   private DList2 rleList = new DList2();
 
   /**
    *  The following methods are required for Part II.
@@ -50,10 +47,14 @@ public class RunLengthEncoding implements Iterable {
 
   public RunLengthEncoding(int width, int height) {
     // Your solution here.
-    this.width = width;
-    this.height = height;
-    runs = new DList();
-    runs.insertBack(0, 0, 0, width*height);
+    w = width; h = height;
+    rleArray = new int[width][height][3];
+    for (int x = 0; x < width; x++) {
+      for (int y = 0; y < height; y++) {
+        RLEComponent rle = new RLEComponent();
+        rleList.insertEnd(rle);
+      }
+    }
   }
 
   /**
@@ -80,11 +81,11 @@ public class RunLengthEncoding implements Iterable {
   public RunLengthEncoding(int width, int height, int[] red, int[] green,
                            int[] blue, int[] runLengths) {
     // Your solution here.
-    this.width = width;
-    this.height = height;
-    runs = new DList();
-    for(int i = 0; i < red.length; i++){
-      runs.insertBack(red[i], green[i], blue[i], runLengths[i]);
+    w = width; h = height;
+    rleArray = new int[width][height][3];
+    for (int x = 0; x < red.length; x++) {
+      RLEComponent rle = new RLEComponent({red, green, blue}, runLengths);
+      rleList.insertEnd(rle);
     }
   }
 
@@ -97,7 +98,7 @@ public class RunLengthEncoding implements Iterable {
 
   public int getWidth() {
     // Replace the following line with your solution.
-    return width;
+    return w;
   }
 
   /**
@@ -108,7 +109,7 @@ public class RunLengthEncoding implements Iterable {
    */
   public int getHeight() {
     // Replace the following line with your solution.
-    return height;
+    return h;
   }
 
   /**
@@ -120,7 +121,7 @@ public class RunLengthEncoding implements Iterable {
    */
   public RunIterator iterator() {
     // Replace the following line with your solution.
-    return new RunIterator(runs.head);
+    return new RunIterator(rleList.head);
     // You'll want to construct a new RunIterator, but first you'll need to
     // write a constructor in the RunIterator class.
   }
@@ -133,18 +134,20 @@ public class RunLengthEncoding implements Iterable {
    */
   public PixImage toPixImage() {
     // Replace the following line with your solution.
-    PixImage runs2Pix = new PixImage(width, height);
-    DListNode current = runs.head;
-    int count = current.num;
-    for(int j = 0; j < height; j++)
-      for(int i = 0; i < width; i++){
-        runs2Pix.setPixel(i, j, (short)current.r, (short)current.g, (short)current.b);
-      if(count == (j*width + i + 1)){
-        current = current.next;
-        if(current != null){
-          count += current.num;
+    PixImage runs2Pix = new PixImage(w, h);
+    DListNode node = rleList.head;
+    int count = node.item.length;
+    for (int x = 0; x < w; x++) {
+      for (int y = 0; y < h; y++) {
+        runs2Pix.setPixel(i, j, (short)node.item.intensity[0],
+        (short)node.item.intensity[1], (short)node.item.intensity[2]);
+        if (count == (y*w + i + 1)) {
+          node = node.next;
         }
-      } 
+        if (node != null) {
+          count += node.num;
+        }
+      }
     }
     return runs2Pix;
   }
@@ -160,12 +163,7 @@ public class RunLengthEncoding implements Iterable {
    */
   public String toString() {
     // Replace the following line with your solution.
-    String p = new String();
-    DListNode current = runs.head;
-    for(int i = 0; i < runs.size; i++){
-      p = p +"| " + current.r + " " + current.g + " " + current.b + ", " + current.num + " ";
-    }
-    return p;
+    return rleList.toString();
   }
 
 
@@ -176,7 +174,7 @@ public class RunLengthEncoding implements Iterable {
   /**
    *  RunLengthEncoding() (with one parameter) is a constructor that creates
    *  a run-length encoding of a specified PixImage.
-   * 
+   *
    *  Note that you must encode the image in row-major format, i.e., the second
    *  pixel should be (1, 0) and not (0, 1).
    *
@@ -185,22 +183,28 @@ public class RunLengthEncoding implements Iterable {
   public RunLengthEncoding(PixImage image) {
     // Your solution here, but you should probably leave the following line
     // at the end.
-    width = image.getWidth();
-    height = image.getHeight();
-    runs = new DList();
-    DListNode run = new DListNode();
-    for(int j = 0; j < height; j++)
-      for(int i = 0; i < width; i++){
-        if(i == 0 && j == 0){
-          run = new DListNode(image.getRed(i,j), image.getGreen(i,j), image.getBlue(i,j), 1);
-        }else if(image.getRed(i,j)== run.r && image.getGreen(i,j) == run.g && image.getBlue(i,j) == run.b){
-          run.num++;
-        }else{
-          runs.insertBack(run.r, run.g, run.b, run.num);
-          run = new DListNode(image.getRed(i,j), image.getGreen(i,j), image.getBlue(i,j), 1);
-        }
+    w = image.getWidth();
+    h = image.getHeight();
+    DListNode2 node = new DListNode2();
+    for (int x = 0; x < w; x++) {
+      for (int y = 0; y < h ; y++ ) {
+        if (x == 0 && y == 0) {
+            RLEComponent temp = new RLEComponent({image.getRed(x,y),
+            image.getGreen(x,y), image.getBlue(x,y)}, 1);
+            node = new DListNode2(temp);
+          } else if (image.getRed(x,y) == node.item.intensity[0]
+          && image.getGreen(x,y) == node.item.intensity[1]
+          && image.getBlue(x,y) == node.item.intensity[2]) {
+            node.item.length++;
+          } else {
+            rleList.insertEnd(node);
+            RLEComponent temp = new RLEComponent({image.getRed(x,y),
+            image.getGreen(x,y), image.getBlue(x,y)}, 1);
+            node = new DListNode2(temp);
+          }
       }
-    runs.insertBack(run.r, run.g, run.b, run.num);  
+
+    }
     check();
   }
 
@@ -211,33 +215,6 @@ public class RunLengthEncoding implements Iterable {
    */
   public void check() {
     // Your solution here.
-    if(runs.size < 1){
-       System.out.println("Error:less than 1 run");
-     }else if(runs.size == 1){
-       if(runs.head.num != width*height){
-         System.out.println("Error:not equal number");
-       }
-     }else{
-       DListNode current, current_next;
-       current = runs.head;
-       current_next = current.next;
-       for(int i = 1; i <= runs.size-1; i++){
-          if(current.r == current_next.r && current.g == current_next.g && current.b == current_next.b){
-            System.out.println("Error:consecutive runs");
-          }
-          current = current_next;
-          current_next = current_next.next;
-       }
-       current = runs.head;
-       int count = 0;
-       for(int i = 1; i <= runs.size; i++){
-         count += current.num;
-         current = current.next;
-       }
-       if(count != width*height){
-         System.out.println("Error:not equal numbers");
-       }
-     }
   }
 
 
@@ -261,107 +238,39 @@ public class RunLengthEncoding implements Iterable {
   public void setPixel(int x, int y, short red, short green, short blue) {
     // Your solution here, but you should probably leave the following line
     //   at the end.
-    int position =  y*width + x + 1;
-      DListNode current, current_left, current_right;
-      current = runs.head;
-      if(runs.size == 1){
-        if(position == 1){
-          current.r = red;
-          current.g = green;
-          current.b = blue;
-        }
-      }else{
-        boolean left = false, right = false;
-        int front = 0, end = 0;
-        end = current.num;
-      for(int i = 1; i <= runs.size-1; i++){
-        if(position <= end){
-          break;
-        }else{
-          current = current.next;
-          front = end;
-          end += current.num;
-          }
-        }
-        if(end - front == 1){
-          current_left = current.prev;
-          current_right = current.next;
-          current.r = red;
-          current.g = green;
-          current.b = blue;
-          if(current_left != null && current_left.r == current.r && current_left.g == current.g && current_left.b == current.b){
-            left = true;
-          }
-          if(current_right != null && current_right.r == current.r && current_right.g == current.g && current_right.b == current.b){
-            right = true;
-          }
-          if(left == true && right == false){
-            current_left.num++;
-            if(current_right == null){
-              runs.removeBack();
-            }else{
-              runs.removeBetween(current_left);
-            }
+    int pos = y*w + x + 1;
+    DListNode2 node = rleList.head;
+    DList2 front = new DList2();
+    DList2 back = new DList2();
+    int i = 0;
+    do {
+      front.insertEnd(node.item);
+      i += node.next.item.length;
+      node = node.next;
+    } while (i < pos);
 
-          }else if(left == false && right == true){
-            current_right.num++;
-            if(current_left == null){
-              runs.removeFront();
-            }else{
-              runs.removeBetween(current_left);
-            }
-          }else if(left == true && right == true){
-            current_left.num = current_left.num + current.num + current_right.num;
-            runs.removeBetween(current_left);
-            if(runs.size > 2){
-              runs.removeBetween(current_left);
-            }else if(runs.size == 2){
-              runs.removeBack();
-            }
-          }
-        }else if(position - front == 1){
-          current_left = current.prev;
-          current_right = current;
-          if(current.r != red || current.g != green || current.b != blue){
-            if(current_left != null && current_left.r == red && current_left.g == green && current_left.b == blue){
-              current_left.num++;
-              current_right.num--;
-            }else{
-              if(current_left == null){
-                current.num--;
-                runs.insertFront(red, green, blue, 1);
-              }else{
-                current.num--;
-                runs.insertBetween(red, green, blue, 1, current_left);
-              }
-            }
-          }
-        }else if(position == end){
-          current_left = current;
-          current_right = current.next;
-          if(current.r != red || current.g != green || current.b != blue){
-            if(current_right != null && current_right.r == red && current_right.g == green && current_right.b == blue){
-              current.num--;
-              current_right.num++;
-            }else{
-              if(current_right == null){
-                current.num--;
-                runs.insertBack(red, green, blue, 1);
-              }else{
-                current.num--;
-                runs.insertBetween(red, green, blue, 1, current);
-              }
-          }
-         }
-        }else if(1 < position-front && position < end){
-          if(current.r != red || current.g != green || current.b != blue){
-            current.num = position - front - 1;
-            runs.insertBetween(red, green, blue, 1, current);
-            current_right = current.next;
-            runs.insertBetween(current.r, current.g, current.b, end-position, current_right);
-          }
-        }
+    RLEComponent pix = new RLEComponent({red,green,blue},1);
+    int t;
+    if (pix.intensity == node.item.intensity) {
+      node.item.length++;
+    } else {
+      if (pos - i == 0) {
+        front.insertEnd(node);
+        front.insertEnd(pix);
+      } else {
+        t = pos - (i - node.item.length);
+        node.item.length = t;
+        front.insertEnd(pix);
+        RLEComponent x = new RLEComponent(node.item.intensity,node.item.length-t);
+        front.insertEnd(x);
       }
+    }
+    while (i < rleList.getSize()) {
+      back.insertEnd(node.item);
+      i += node.next.item.length;
+      node = node.next;
+    }
+    rleList = front.attach(back);
     check();
   }
 
